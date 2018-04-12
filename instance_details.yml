@@ -1,0 +1,90 @@
+---
+-
+  hosts: localhost
+  vars:
+    region: us-east-1
+    fmt: "%Y-%m-%dT%H:%M:%S" 
+  name: "Instances Details"
+  tasks:
+    - file: "path=/tmp/notify state=absent"
+    - file: "path=/tmp/*.xls state=absent"
+    -
+      file: "path=/tmp/notify state=directory"
+      name: "Creates Email Notify directory"
+    -
+      lineinfile:
+        create: true
+        line: "Non Compliant Instances in NONPROD"
+        path: /tmp/noncompliantmachines.txt
+        state: present
+      name: "Create the noncompliant machines txt file for improperly tagged boxes"
+
+    -
+      name: Create sample.xls
+      shell: echo -e "Instanceid\towner\tlaunch_time" > /tmp/expired_instance.xls;
+
+    -
+      ec2_instance_facts:
+        region: "{{ region }}"
+      register: ec2_instances
+
+    -
+      name: "set instance_id loop"
+      set_fact:
+        instance_list: []
+
+    - set_fact:
+         instance_list: "{{ instance_list +[ { 'instance_id': item.instance_id, 'launch_time': item.launch_time[:19] }]}}"
+      name: "Instances which are greater than 30 days"
+      when:  (ansible_date_time.iso8601[:19] | to_datetime(fmt) - item.launch_time[:19] | to_datetime(fmt)).days >= 0
+      with_flattened:
+        - "{{ ec2_instances.instances }}"
+    - 
+     ec2_tag: 
+       region: "{{ region }}"
+       resource: "{{ item.instance_id }}"
+       state: list
+     with_items:
+       - "{{ instance_list }}"
+     name: "Retrieve all tags on an instance"
+     register: ec2_tags
+
+    -
+     debug:
+        msg: "{{ item.item | combine(item.tags) }}"
+     name: "Instances final list data"
+     with_flattened:
+        - "{{ ec2_tags.results }}"
+
+    -
+     name: "set instance_id loop"
+     set_fact:
+        instance_final_list: []
+
+    -
+     set_fact:
+         instance_final_list: "{{ instance_final_list + [  item.item | combine(item.tags ) ] }}"
+     name: "Instances final list"
+     with_items:
+        - "{{ ec2_tags.results }}"
+    -
+     shell: echo -e "{{item.instance_id}}\t{{ item.owner }}\t{{ item.launch_time }}" >> /tmp/expired_instance.xls
+     when: "{{ 'owner' in item }}"
+     with_items: "{{ instance_final_list }}"
+
+    -
+     shell: echo -e "{{item.instance_id}}\t\t{{ item.launch_time }}" >> /tmp/expired_instance.xls
+     when: "{{not 'owner' in item }}"
+     with_items: "{{ instance_final_list }}"
+
+    -
+     name: Accumulate list of EC2 instances by email address from owner tag
+     lineinfile:
+       create: true
+       path: /tmp/notify/{{ item.owner }}.txt
+       state: present
+       line: '{{ item.instance_id }}\t{{ item.owner }}\t{{ item.launch_time }}'
+     when: "{{ 'owner' in item }}"
+     with_items: "{{ instance_final_list }}"
+
+
