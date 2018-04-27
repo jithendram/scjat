@@ -3,8 +3,6 @@
   get_url:
     url: http://35.155.162.189:8081/artifactory/dev/dev-1.0.{{tag}}.tar
     dest: /home/ubuntu/Sujith
-  become: yes
-
 
 - name: 2. unarchive Dynamic artifact 
   unarchive:
