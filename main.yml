@@ -1,7 +1,9 @@
 ---
 # Create the resources
 - hosts: dev
-  connection: local
+ # connection: local
+  connection: ssh
+  remote_user: ubuntu
 
   roles:
     - role: JFrog_Deployment
