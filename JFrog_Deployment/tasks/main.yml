@@ -1,0 +1,17 @@
+---
+- name: 1. Downloading Dynamic artifact 
+  get_url:
+    url: http://35.155.162.189:8081/artifactory/dev/dev-1.0.{{tag}}.tar
+    dest: /home/ubuntu
+  become: true
+  become_user: root
+
+- name: 2. unarchive Dynamic artifact 
+  unarchive:
+    src: /home/ubuntu/dev-1.0.{{tag}}.tar
+    dest: /home/ubuntu
+
+- name: Run scripts
+  command: sh {{item}}
+  with_fileglob:
+    - /home/ubuntu/dev-1.0.{{tag}}.tar/*.sh

@@ -1,0 +1,7 @@
+---
+# Create the resources
+- hosts: localhost
+  connection: local
+
+  roles:
+    - role: JFrog_Deployment
