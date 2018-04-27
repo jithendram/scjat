@@ -4,12 +4,3 @@
     url: http://35.155.162.189:8081/artifactory/dev/dev-1.0.{{tag}}.tar
     dest: /home/ubuntu/Sujith
 
-- name: 2. unarchive Dynamic artifact 
-  unarchive:
-    src: /home/ubuntu/Sujith/dev-1.0.{{tag}}.tar
-    dest: /home/ubuntu/Sujith
-
-- name: Run scripts
-  command: sh {{item}}
-  with_fileglob:
-    - /home/ubuntu/Sujith/dev-1.0.{{tag}}.tar/*.sh
